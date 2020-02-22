@@ -1,0 +1,113 @@
+---
+title: "Homework1"
+author: "Sitian Qian"
+date: "2/21/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+
+  html_document:
+    df_print: paged
+---
+# 设置路径
+
+```{r}
+setwd("~/codes/R")
+dataPath="rData"
+```
+
+# 读入数据
+
+```{r}
+WL <- read.table(paste(dataPath,"AQ_FSPMC_WanLiu.csv",sep="/"),skip = 3,header = TRUE, sep = ",")
+USE <- read.table(paste(dataPath,"AQ_FSPMC_USEmbassy.csv",sep="/"),skip = 3,header = TRUE, sep = ",")
+PRE <- read.table(paste(dataPath,"A_PRE.csv",sep = "/"),skip = 3,header = TRUE, sep = ",")
+TEMP <- read.table(paste(dataPath,"A_TEMP.csv",sep = "/"),skip = 5,header = TRUE, sep = ",",
+                   col.names = c("Date","Time","Height","DegreeCelsius","Source","ErrFlag","Details"),
+                   colClasses = c("character","character",NA,NA,NA,NA,NA))
+RH <- read.table(paste(dataPath,"A_RH.csv",sep = "/"),skip = 3,header = TRUE, sep = ",")
+WIND <- read.table(paste(dataPath,"A_WIND.csv",sep = "/"),skip = 3,header = TRUE, sep = ",")
+```
+
+# 绘制RH: 相对湿度（按月平均）
+
+## 转换时间
+
+```{r}
+RH$TimeST <- strptime(as.character(RH$Time),format = "%Y/%m/%d %H:%M:%S")
+RH_Weekly_Mean <- aggregate(X. ~ cut(TimeST,"1 week"), RH, mean)
+colnames(RH_Weekly_Mean)[1] <- "WeeklyTime"
+RH_Weekly_Mean$WeeklyTimeST <- strptime(as.character(RH_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=6}
+plot(RH_Weekly_Mean$WeeklyTimeST,RH_Weekly_Mean$X.,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Relative Humidity", 
+     main = "Relative Humidity: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelRH =  strftime(RH_Weekly_Mean$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(RH_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i-1)*20
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(50), lty=2, col="red")
+legend("topleft", inset=0.05,c("Relative Humidity","Reference: 50"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
+
+# 绘制PRE: 气压（按月平均）
+
+## 转换时间
+
+```{r}
+PRE$TimeST <- strptime(as.character(PRE$Time),format = "%Y/%m/%d %H:%M:%S")
+PRE_Weekly_Mean <- aggregate(Pascal ~ cut(TimeST,"1 week"), PRE, mean)
+colnames(PRE_Weekly_Mean)[1] <- "WeeklyTime"
+PRE_Weekly_Mean$WeeklyTimeST <- strptime(as.character(PRE_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=6}
+plot(PRE_Weekly_Mean$WeeklyTimeST,PRE_Weekly_Mean$Pascal,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Pressure", 
+     main = "Pressure: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelPRE =  strftime(PRE_Weekly_Mean$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(PRE_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelPRE, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i-1)*1000+100000
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(101500), lty=2, col="red")
+legend("top", inset=0.05,c("Pressure","Reference: 111500"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
+
+# 绘制TEMP: 温度（按月平均）
+
+## 转换时间
+
+```{r}
+selTEMP <- subset(TEMP, Source == "GTS_AAXX", select = c(Date,Time,DegreeCelsius , Source) )
+selTEMP$FullTime <- paste(selTEMP$Date,selTEMP$Time,sep = " ")
+selTEMP$TimeST <- strptime(as.character(selTEMP$FullTime),format = "%Y%m%d %H%M%S")
+TEMP_Weekly_Mean <- aggregate(DegreeCelsius ~ cut(TimeST,"1 week"), selTEMP, mean)
+colnames(TEMP_Weekly_Mean)[1] <- "WeeklyTime"
+TEMP_Weekly_Mean$WeeklyTimeST <- strptime(as.character(TEMP_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=6}
+plot(TEMP_Weekly_Mean$WeeklyTimeST,TEMP_Weekly_Mean$DegreeCelsius,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Temperature", 
+     main = "Temperature: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelTEMP =  strftime(TEMP_Weekly_Mean$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(TEMP_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelTEMP, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i-1)*10 -20
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(15), lty=2, col="red")
+legend("topleft", inset=0.05,c("Temperature","Reference: 15"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
