@@ -3,11 +3,12 @@ title: "Homework1"
 author: "Sitian Qian"
 date: "2/21/2020"
 output:
-  pdf_document:
-    latex_engine: xelatex
-
   html_document:
     df_print: paged
+  pdf_document:
+    latex_engine: xelatex
+    includes:
+      in_header: header.tex
 ---
 # 设置路径
 
@@ -27,33 +28,6 @@ TEMP <- read.table(paste(dataPath,"A_TEMP.csv",sep = "/"),skip = 5,header = TRUE
                    colClasses = c("character","character",NA,NA,NA,NA,NA))
 RH <- read.table(paste(dataPath,"A_RH.csv",sep = "/"),skip = 3,header = TRUE, sep = ",")
 WIND <- read.table(paste(dataPath,"A_WIND.csv",sep = "/"),skip = 3,header = TRUE, sep = ",")
-```
-
-# 绘制RH: 相对湿度（按月平均）
-
-## 转换时间
-
-```{r}
-RH$TimeST <- strptime(as.character(RH$Time),format = "%Y/%m/%d %H:%M:%S")
-RH_Weekly_Mean <- aggregate(X. ~ cut(TimeST,"1 week"), RH, mean)
-colnames(RH_Weekly_Mean)[1] <- "WeeklyTime"
-RH_Weekly_Mean$WeeklyTimeST <- strptime(as.character(RH_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
-```
-
-## 绘图
-```{r, fig.width=12,fig.height=6}
-plot(RH_Weekly_Mean$WeeklyTimeST,RH_Weekly_Mean$X.,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Relative Humidity", 
-     main = "Relative Humidity: Weekly Averaged",col="blue")
-xpos <- c(1:10)
-xpos <- (xpos-1)*6 + 2
-labelRH =  strftime(RH_Weekly_Mean$WeeklyTimeST
-                    [xpos],"%m/%d")
-axis(1, at=as.numeric(RH_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
-i <- c(1:6)
-ypos <- (i-1)*20
-axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
-abline(h=c(50), lty=2, col="red")
-legend("topleft", inset=0.05,c("Relative Humidity","Reference: 50"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
 ```
 
 # 绘制PRE: 气压（按月平均）
@@ -83,7 +57,7 @@ abline(h=c(101500), lty=2, col="red")
 legend("top", inset=0.05,c("Pressure","Reference: 111500"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
 ```
 
-# 绘制TEMP: 温度（按月平均）
+# 绘制TEMP: 温度（来自AAXX：按周平均）
 
 ## 转换时间
 
@@ -110,4 +84,117 @@ ypos <- (i-1)*10 -20
 axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
 abline(h=c(15), lty=2, col="red")
 legend("topleft", inset=0.05,c("Temperature","Reference: 15"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
+
+# 绘制RH: 相对湿度（来自：AAXX，按周平均）
+
+## 转换时间
+
+```{r}
+selRH <- subset(RH, Source == "GTS_AAXX", select = c(Time,X. , Source) )
+selRH$TimeST <- strptime(as.character(selRH$Time),format = "%Y/%m/%d %H:%M:%S")
+RH_Weekly_Mean <- aggregate(X. ~ cut(TimeST,"1 week"), selRH, mean)
+colnames(RH_Weekly_Mean)[1] <- "WeeklyTime"
+RH_Weekly_Mean$WeeklyTimeST <- strptime(as.character(RH_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=6}
+plot(RH_Weekly_Mean$WeeklyTimeST,RH_Weekly_Mean$X.,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Relative Humidity", 
+     main = "Relative Humidity: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelRH =  strftime(RH_Weekly_Mean$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(RH_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i-1)*20 
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(50), lty=2, col="red")
+legend("topleft", inset=0.05,c("Relative Humidity","Reference: 50"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
+
+# 绘制WIND：风向与风速（来自：AAXX，按周平均）
+
+## 转换时间&矢量平均
+
+```{r}
+selWIND <- subset(WIND, Source == "GTS_AAXX", select = c(Time,m.s,Degree , Source) )
+selWIND$TimeST <- strptime(as.character(selWIND$Time),format = "%Y/%m/%d %H:%M:%S")
+selWIND$X <- cos((selWIND$Degree-180)/180*pi)*selWIND$m.s
+selWIND$Y <- sin((selWIND$Degree-180)/180*pi)*selWIND$m.s
+SpeedX_Weekly <- aggregate(X ~ cut(TimeST,"1 week"), selWIND, mean)
+colnames(SpeedX_Weekly)[1] <- "WeeklyTime"
+SpeedX_Weekly$WeeklyTimeST <- strptime(as.character(SpeedX_Weekly$WeeklyTime),format = "%Y-%m-%d")
+SpeedY_Weekly <- aggregate(Y ~ cut(TimeST,"1 week"), selWIND, mean)
+colnames(SpeedY_Weekly)[1] <- "WeeklyTime"
+SpeedY_Weekly$WeeklyTimeST <- strptime(as.character(SpeedY_Weekly$WeeklyTime),format = "%Y-%m-%d")
+Speed_Weekly <- subset(SpeedY_Weekly,select = WeeklyTimeST)
+Speed_Weekly$m.s <- sqrt(SpeedY_Weekly$Y^2+SpeedX_Weekly$X^2)
+Direct_Weekly <- subset(SpeedX_Weekly,select = WeeklyTimeST)
+Direct_Weekly$Degree <- atan2(SpeedY_Weekly$Y,SpeedX_Weekly$X)/pi*180 + 180
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=12}
+par(mfrow=c(2,1))
+plot(Speed_Weekly$WeeklyTimeST,Speed_Weekly$m.s,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Wind Speed", 
+     main = "Wind Speed: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelRH =  strftime(Speed_Weekly$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(Speed_Weekly$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:7)
+ypos <- (i)*0.2 
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(0.7), lty=2, col="red")
+legend("topright", inset=0.01,c("Wind Speed","Reference: 0.7"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+plot(Direct_Weekly$WeeklyTimeST,Direct_Weekly$Degree,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "Wind Direct", 
+     main = "Wind Direct: Weekly Averaged",col="blue")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelRH =  strftime(Direct_Weekly$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(Direct_Weekly$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i)*50
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(180), lty=2, col="red")
+legend("bottomleft", inset=0.01,c("Wind Direct","Reference: 180"),title = "Legend", lty=c(1,1), pch=c(3,20), col=c("blue","red") )
+```
+
+# 绘制两站PM2.5：USE & WL（来自：AAXX，按周平均）
+
+## 转换时间
+
+```{r}
+USE$TimeST <- strptime(as.character(USE$Time),format = "%Y/%m/%d %H:%M:%S")
+USE_Weekly_Mean <- aggregate(ug.m3 ~ cut(TimeST,"1 week"), USE, mean)
+colnames(USE_Weekly_Mean)[1] <- "WeeklyTime"
+USE_Weekly_Mean$WeeklyTimeST <- strptime(as.character(USE_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+WL$TimeST <- strptime(as.character(WL$Time),format = "%Y/%m/%d %H:%M:%S")
+WL_Weekly_Mean <- aggregate(ug.m3 ~ cut(TimeST,"1 week"), WL, mean)
+colnames(WL_Weekly_Mean)[1] <- "WeeklyTime"
+WL_Weekly_Mean$WeeklyTimeST <- strptime(as.character(WL_Weekly_Mean$WeeklyTime),format = "%Y-%m-%d")
+```
+
+## 绘图
+```{r, fig.width=12,fig.height=6}
+plot(USE_Weekly_Mean$WeeklyTimeST,USE_Weekly_Mean$ug.m3,pch=3,lty=1,xaxt="n",yaxt="n",cex.lab=1, type = "o",xlab = "Date",ylab = "PM2.5 Level", 
+     main = "PM2.5: Weekly Averaged",col="blue")
+points(WL_Weekly_Mean$WeeklyTimeST,WL_Weekly_Mean$ug.m3,pch=3,col="yellow")
+lines(WL_Weekly_Mean$WeeklyTimeST,WL_Weekly_Mean$ug.m3,lty=1,col="yellow",type = "o")
+xpos <- c(1:10)
+xpos <- (xpos-1)*6 + 2
+labelRH =  strftime(USE_Weekly_Mean$WeeklyTimeST
+                    [xpos],"%m/%d")
+axis(1, at=as.numeric(USE_Weekly_Mean$WeeklyTimeST[xpos]), labels=labelRH, col.axis="black", las=2, cex.axis=0.7, tck=-0.02)
+i <- c(1:6)
+ypos <- (i)*20
+axis(2, at=ypos, col.axis="black", las=1, cex.axis=0.7, tck=-0.02)
+abline(h=c(50), lty=2, col="red")
+
+legend("topright", inset=0.1,c("USE","WL","Reference: 40"),title = "Legend", lty=c(1,1,1), pch=c(3,3,20), col=c("blue","yellow","red") )
+
 ```
